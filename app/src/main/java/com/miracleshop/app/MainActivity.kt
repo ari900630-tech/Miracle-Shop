@@ -2,6 +2,9 @@ package com.miracleshop.app
 
 import android.content.Intent
 import android.net.Uri
+import android.app.DownloadManager
+import android.os.Environment
+import android.webkit.URLUtil
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -280,7 +283,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openDownload(url: String) {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle("Miracle Shop")
+            .setDescription("מוריד קובץ APK")
+            .setMimeType("application/vnd.android.package-archive")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(
+                Environment.DIRECTORY_DOWNLOADS,
+                URLUtil.guessFileName(url, null, "application/vnd.android.package-archive")
+            )
+            .setAllowedOverMetered(true)
+            .setAllowedOverRoaming(true)
+
+        val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        manager.enqueue(request)
     }
 
     private fun loadAppsFromFDroid(searchText: String): List<StoreApp> {
