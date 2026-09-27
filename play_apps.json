@@ -1,0 +1,10 @@
+{
+  "apps": [
+    {
+      "packageName": "PUT_YOUR_PLAY_PACKAGE_NAME_HERE",
+      "name": "האפליקציה שלך",
+      "description": "אפליקציה מ-Google Play",
+      "imageUrl": ""
+    }
+  ]
+}
