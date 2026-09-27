@@ -46,7 +46,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MiracleShopApp() {
         var query by remember { mutableStateOf(TextFieldValue("")) }
-        var selected by remember { mutableIntStateOf(0) }
+        var selectedTab by remember { mutableIntStateOf(0) }
+        var selectedCategory by remember { mutableIntStateOf(0) }
         var dark by remember { mutableStateOf(false) }
         val filtered = demoApps.filter { it.name.contains(query.text, true) || it.description.contains(query.text, true) }
         val background by animateColorAsState(if (dark) Color(0xFF101116) else Color(0xFFF7F7FB), label = "bg")
@@ -82,7 +83,7 @@ class MainActivity : ComponentActivity() {
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("הכול", "כללי", "כלים").forEachIndexed { index, label ->
-                            FilterChip(selected = selected == index, onClick = { selected = index }, label = { Text(label) })
+                            FilterChip(selected = selectedCategory == index, onClick = { selectedCategory = index }, label = { Text(label) })
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -91,14 +92,14 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        items(filtered.filter { selected == 0 || it.category == listOf("הכול", "כללי", "כלים")[selected] }) { app ->
+                        items(filtered.filter { selectedCategory == 0 || it.category == listOf("הכול", "כללי", "כלים")[selectedCategory] }) { app ->
                             AppCard(app, card) { openDownload(app.downloadUrl) }
                         }
                     }
                     NavigationBar(containerColor = card) {
-                        NavigationBarItem(selected = selected == 0, onClick = { selected = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("בית") })
-                        NavigationBarItem(selected = selected == 1, onClick = { selected = 1 }, icon = { Icon(Icons.Default.Apps, null) }, label = { Text("אפליקציות") })
-                        NavigationBarItem(selected = selected == 2, onClick = { selected = 2 }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("הורדות") })
+                        NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("בית") })
+                        NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, icon = { Icon(Icons.Default.Apps, null) }, label = { Text("אפליקציות") })
+                        NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("הורדות") })
                     }
                 }
             }
