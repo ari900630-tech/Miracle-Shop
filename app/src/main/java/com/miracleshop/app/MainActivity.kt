@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,21 +64,17 @@ class MainActivity : ComponentActivity() {
     private fun MiracleShopApp() {
         var showSplash by remember { mutableStateOf(true) }
         val splashScale = remember { Animatable(1.65f) }
-        val splashRotation = remember { Animatable(0f) }
         val splashAlpha = remember { Animatable(1f) }
 
         LaunchedEffect(Unit) {
             launch {
-                splashScale.animateTo(0.62f, tween(1250, easing = FastOutSlowInEasing))
+                splashScale.animateTo(0.72f, tween(900, easing = FastOutSlowInEasing))
             }
             launch {
-                splashRotation.animateTo(540f, tween(1250, easing = FastOutSlowInEasing))
+                delay(600)
+                splashAlpha.animateTo(0f, tween(300))
             }
-            launch {
-                delay(850)
-                splashAlpha.animateTo(0f, tween(350))
-            }
-            delay(1350)
+            delay(950)
             showSplash = false
         }
 
@@ -94,7 +91,6 @@ class MainActivity : ComponentActivity() {
                                 .graphicsLayer {
                                     scaleX = splashScale.value
                                     scaleY = splashScale.value
-                                    rotationZ = splashRotation.value
                                     alpha = splashAlpha.value
                                 }
                         )
@@ -180,9 +176,16 @@ class MainActivity : ComponentActivity() {
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("חיפוש אפליקציות…") },
+                            placeholder = {
+                                Text(
+                                    "חיפוש אפליקציות…",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Right
+                                )
+                            },
                             leadingIcon = { Icon(Icons.Default.Search, null) },
                             singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Right),
                             shape = RoundedCornerShape(16.dp)
                         )
 
@@ -285,14 +288,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openDownload(url: String) {
+        val fileName = URLUtil.guessFileName(
+            url,
+            null,
+            "application/vnd.android.package-archive"
+        ).let { if (it.endsWith(".apk", true)) it else "$it.apk" }
+
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("Miracle Shop")
-            .setDescription("מוריד קובץ APK")
+            .setDescription("מוריד APK — לאחר ההורדה תיפתח התקנת האפליקציה")
             .setMimeType("application/vnd.android.package-archive")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(
+            .setDestinationInExternalFilesDir(
+                this,
                 Environment.DIRECTORY_DOWNLOADS,
-                URLUtil.guessFileName(url, null, "application/vnd.android.package-archive")
+                fileName
             )
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
@@ -367,29 +377,44 @@ class MainActivity : ComponentActivity() {
             colors = CardDefaults.cardColors(containerColor = card),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = app.imageUrl,
-                    contentDescription = app.name,
-                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(18.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(app.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        app.description,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Row(
+                    Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AsyncImage(
+                        model = app.imageUrl,
+                        contentDescription = app.name,
+                        modifier = Modifier.size(72.dp).clip(RoundedCornerShape(18.dp)),
+                        contentScale = ContentScale.Crop
                     )
-                    Text(
-                        "גרסה " + app.version,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(onClick = onDownload) {
-                    Text("הורדת APK")
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            app.name,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Right
+                        )
+                        Text(
+                            app.description,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            textAlign = TextAlign.Right
+                        )
+                        Text(
+                            "גרסה " + app.version,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Right
+                        )
+                    }
+                    FilledTonalButton(onClick = onDownload) {
+                        Text("הורדת APK")
+                    }
                 }
             }
         }
