@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -199,29 +200,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Spacer(Modifier.height(12.dp))
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
-                            categories.forEachIndexed { index, label ->
-                                FilterChip(
-                                    selected = selectedCategory == index,
-                                    onClick = { selectedCategory = index },
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    label = {
-                                        CompositionLocalProvider(
-                                            LocalLayoutDirection provides LayoutDirection.Rtl
-                                        ) {
-                                            Text(label)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "קטלוג APK ציבורי • F-Droid",
@@ -263,6 +241,25 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    Spacer(Modifier.height(6.dp))
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        LazyRow(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 2.dp)
+                        ) {
+                            items(categories) { label ->
+                                val index = categories.indexOf(label)
+                                FilterChip(
+                                    selected = selectedCategory == index,
+                                    onClick = { selectedCategory = index },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+
                     NavigationBar(containerColor = card) {
                         NavigationBarItem(
                             selected = selectedTab == 0,
@@ -279,8 +276,14 @@ class MainActivity : ComponentActivity() {
                         NavigationBarItem(
                             selected = selectedTab == 2,
                             onClick = { selectedTab = 2 },
-                            icon = { Icon(Icons.Default.Download, null) },
-                            label = { Text("הורדות") }
+                            icon = { Icon(Icons.Default.Gamepad, null) },
+                            label = { Text("משחקים") }
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
+                            icon = { Icon(Icons.Default.Settings, null) },
+                            label = { Text("הגדרות") }
                         )
                     }
                 }
