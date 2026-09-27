@@ -5,6 +5,10 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,12 +25,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class StoreApp(
     val name: String,
@@ -47,6 +57,67 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun MiracleShopApp() {
+        var showSplash by remember { mutableStateOf(true) }
+        val scope = rememberCoroutineScope()
+        val splashScale = remember { Animatable(1.65f) }
+        val splashRotation = remember { Animatable(0f) }
+        val splashAlpha = remember { Animatable(1f) }
+
+        LaunchedEffect(Unit) {
+            launch {
+                splashScale.animateTo(
+                    0.62f,
+                    animationSpec = tween(1250, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                splashRotation.animateTo(
+                    540f,
+                    animationSpec = tween(1250, easing = FastOutSlowInEasing)
+                )
+            }
+            launch {
+                delay(850)
+                splashAlpha.animateTo(0f, tween(350))
+            }
+            delay(1350)
+            showSplash = false
+        }
+
+        if (showSplash) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color(0xFF5B3FD3)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Miracle Shop",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(116.dp)
+                                .graphicsLayer {
+                                    scaleX = splashScale.value
+                                    scaleY = splashScale.value
+                                    rotationZ = splashRotation.value
+                                    alpha = splashAlpha.value
+                                }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Miracle Shop",
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.graphicsLayer { alpha = splashAlpha.value }
+                        )
+                    }
+                }
+            }
+            return
+        }
+
         var query by remember { mutableStateOf(TextFieldValue("")) }
         var selectedTab by remember { mutableIntStateOf(0) }
         var selectedCategory by remember { mutableIntStateOf(0) }
@@ -121,18 +192,29 @@ class MainActivity : ComponentActivity() {
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                             onClick = { }
                         ) {
-                            Icon(Icons.Default.Storefront, "Miracle Shop", Modifier.size(28.dp))
+                            Icon(Icons.Default.PlayArrow, "Miracle Shop", Modifier.size(30.dp))
                         }
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("הכול", "כללי", "כלים").forEachIndexed { index, label ->
-                            FilterChip(
-                                selected = selectedCategory == index,
-                                onClick = { selectedCategory = index },
-                                label = { Text(label) }
-                            )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("הכול", "כללי", "כלים").forEachIndexed { index, label ->
+                                    FilterChip(
+                                        selected = selectedCategory == index,
+                                        onClick = { selectedCategory = index },
+                                        label = {
+                                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                                Text(label)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
