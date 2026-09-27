@@ -312,61 +312,64 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadAppsFromFDroid(searchText: String): List<StoreApp> {
-        val encoded = URLEncoder.encode(searchText, "UTF-8")
-        val searchJson = java.net.URL(FDROID_SEARCH_API + encoded).openConnection().apply {
+        val indexUrl = "https://f-droid.org/repo/index-v2.json"
+        val json = java.net.URL(indexUrl).openConnection().apply {
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "Miracle-Shop")
+            connectTimeout = 20000
+            readTimeout = 30000
         }.getInputStream().bufferedReader().use { it.readText() }
 
-        val apps = org.json.JSONArray(org.json.JSONObject(searchJson).optString("apps", "[]"))
+        val root = org.json.JSONObject(json)
+        val packages = root.optJSONObject("packages") ?: org.json.JSONObject()
+        val wanted = searchText.trim().lowercase()
         val result = mutableListOf<StoreApp>()
 
-        for (i in 0 until apps.length()) {
-            val item = apps.getJSONObject(i)
-            val name = item.optString("name", "אפליקציה")
-            val summary = item.optString("summary", "")
-            val icon = item.optString("icon", "")
-            val pageUrl = item.optString("url", "")
-            val packageName = pageUrl.substringAfterLast("/").takeIf { it.isNotBlank() } ?: continue
-
-            try {
-                val packageJson = java.net.URL(FDROID_PACKAGE_API + packageName).openConnection().apply {
-                    setRequestProperty("Accept", "application/json")
-                    setRequestProperty("User-Agent", "Miracle-Shop")
-                }.getInputStream().bufferedReader().use { it.readText() }
-
-                val packageObj = org.json.JSONObject(packageJson)
-                val packages = packageObj.optJSONArray("packages") ?: continue
-                if (packages.length() == 0) continue
-
-                val latest = packages.getJSONObject(0)
-                val versionName = latest.optString("versionName", "latest")
-                val versionCode = latest.optLong("versionCode", 0L)
-                if (versionCode <= 0L) continue
-
-                val apkUrl = FDROID_APK_BASE + packageName + "_" + versionCode + ".apk"
-                val category = if (
-                    name.contains("tool", true) ||
-                    summary.contains("utility", true) ||
-                    summary.contains("tool", true)
-                ) "כלים" else "כללי"
-
-                result.add(
-                    StoreApp(
-                        name = name,
-                        description = summary,
-                        version = versionName,
-                        downloadUrl = apkUrl,
-                        category = category,
-                        imageUrl = icon
-                    )
-                )
-            } catch (_: Exception) {
-                // Skip an app whose metadata is temporarily unavailable.
+        val keys = packages.keys()
+        while (keys.hasNext()) {
+            val packageName = keys.next()
+            val item = packages.optJSONObject(packageName) ?: continue
+            val metadata = item.optJSONObject("metadata") ?: item
+            val name = metadata.optString("name", packageName)
+            val summary = metadata.optString("summary", metadata.optString("description", ""))
+            val categories = metadata.optJSONArray("categories")
+            val categoryText = buildString {
+                if (categories != null) for (i in 0 until categories.length()) append(categories.optString(i)).append(' ')
             }
-        }
+            val haystack = "$name $summary $categoryText $packageName".lowercase()
+            if (wanted.isNotEmpty() && !haystack.contains(wanted)) continue
 
-        return result.distinctBy { it.downloadUrl }
+            val versions = item.optJSONObject("versions") ?: continue
+            var best: org.json.JSONObject? = null
+            val vk = versions.keys()
+            while (vk.hasNext()) {
+                val v = versions.optJSONObject(vk.next()) ?: continue
+                if (best == null || v.optLong("versionCode", 0) > best!!.optLong("versionCode", 0)) best = v
+            }
+            val version = best ?: continue
+            val versionCode = version.optLong("versionCode", 0)
+            if (versionCode <= 0) continue
+
+            val apkName = version.optString("file", "")
+                .ifBlank { version.optString("name", "") }
+                .ifBlank { "$packageName_$versionCode.apk" }
+            val apkUrl = FDROID_APK_BASE + apkName
+            val iconPath = metadata.optString("icon", "")
+            val iconUrl = if (iconPath.startsWith("http")) iconPath else "https://f-droid.org/repo/$iconPath"
+            val text = haystack
+            val category = when {
+                text.contains("game") || text.contains("games") -> "משחקים"
+                text.contains("internet") || text.contains("communication") || text.contains("social") -> "תקשורת"
+                text.contains("multimedia") || text.contains("music") || text.contains("video") -> "מולטימדיה"
+                text.contains("security") || text.contains("privacy") -> "אבטחה"
+                text.contains("education") || text.contains("learning") -> "לימודים"
+                text.contains("productivity") || text.contains("office") -> "פרודוקטיביות"
+                text.contains("tools") || text.contains("utility") -> "כלים"
+                else -> "כללי"
+            }
+            result.add(StoreApp(name, summary, version.optString("versionName", "latest"), apkUrl, category, iconUrl))
+        }
+        return result.distinctBy { it.downloadUrl }.sortedBy { it.name.lowercase() }
     }
 
     @Composable
