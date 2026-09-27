@@ -19,17 +19,18 @@ jobs:
           python-version: '3.12'
 
       - name: Generate Google Play catalog securely
-        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           python -m pip install --quiet google-auth requests
           python scripts/generate_play_catalog.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add play_catalog.json
-          git diff --cached --quiet || git commit -m "Update Google Play catalog"
-          git push
+          if ! git diff --quiet -- play_catalog.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add play_catalog.json
+            git commit -m "Update Google Play catalog"
+            git push
+          fi
 
       - uses: actions/setup-java@v4
         with:
