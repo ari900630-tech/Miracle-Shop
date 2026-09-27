@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 Box(contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Default.PlayArrow,
+                            Icons.Default.Storefront,
                             "Miracle Shop",
                             tint = Color.White,
                             modifier = Modifier
@@ -197,21 +197,23 @@ class MainActivity : ComponentActivity() {
 
                     Spacer(Modifier.height(12.dp))
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                categories.forEachIndexed { index, label ->
-                                    FilterChip(
-                                        selected = selectedCategory == index,
-                                        onClick = { selectedCategory = index },
-                                        label = {
-                                            CompositionLocalProvider(
-                                                LocalLayoutDirection provides LayoutDirection.Rtl
-                                            ) {
-                                                Text(label)
-                                            }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            categories.forEachIndexed { index, label ->
+                                FilterChip(
+                                    selected = selectedCategory == index,
+                                    onClick = { selectedCategory = index },
+                                    modifier = Modifier.padding(end = 8.dp),
+                                    label = {
+                                        CompositionLocalProvider(
+                                            LocalLayoutDirection provides LayoutDirection.Rtl
+                                        ) {
+                                            Text(label)
                                         }
-                                    )
-                                }
+                                    }
+                                )
                             }
                         }
                     }
