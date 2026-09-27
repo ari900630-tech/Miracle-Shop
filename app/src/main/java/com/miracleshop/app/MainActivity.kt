@@ -176,17 +176,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            OutlinedTextField(
+                        OutlinedTextField(
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.weight(1f),
                             placeholder = { Text("חיפוש אפליקציות…") },
-                            trailingIcon = { Icon(Icons.Default.Search, null) },
+                            leadingIcon = { Icon(Icons.Default.Search, null) },
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp)
-                            )
-                        }
+                        )
 
                         IconButton(
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
