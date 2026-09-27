@@ -98,11 +98,14 @@ class MainActivity : ComponentActivity() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         IconButton(
-                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            onClick = { }
+                            modifier = Modifier.size(48.dp).clip(CircleShape).background(card),
+                            onClick = { dark = !dark }
                         ) {
-                            Icon(Icons.Default.Storefront, "Miracle Shop", Modifier.size(28.dp))
+                            Icon(
+                                if (dark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                "מצב יום/לילה",
+                                tint = foreground
+                            )
                         }
                         OutlinedTextField(
                             value = query,
@@ -114,14 +117,11 @@ class MainActivity : ComponentActivity() {
                             shape = RoundedCornerShape(16.dp)
                         )
                         IconButton(
-                            modifier = Modifier.size(48.dp).clip(CircleShape).background(card),
-                            onClick = { dark = !dark }
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            onClick = { }
                         ) {
-                            Icon(
-                                if (dark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                "מצב יום/לילה",
-                                tint = foreground
-                            )
+                            Icon(Icons.Default.Storefront, "Miracle Shop", Modifier.size(28.dp))
                         }
                     }
 
