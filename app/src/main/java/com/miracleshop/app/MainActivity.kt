@@ -5,11 +5,10 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.FastOutSlowInEasing
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,16 +26,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.runtime.CompositionLocalProvider
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
 
 data class StoreApp(
     val name: String,
@@ -47,7 +46,9 @@ data class StoreApp(
     val imageUrl: String
 )
 
-private const val GITHUB_API = "https://api.github.com/users/ari900630-tech/repos?per_page=100"
+private const val FDROID_SEARCH_API = "https://search.f-droid.org/api/search_apps?q="
+private const val FDROID_PACKAGE_API = "https://f-droid.org/api/v1/packages/"
+private const val FDROID_APK_BASE = "https://f-droid.org/repo/"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,23 +59,16 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MiracleShopApp() {
         var showSplash by remember { mutableStateOf(true) }
-        val scope = rememberCoroutineScope()
         val splashScale = remember { Animatable(1.65f) }
         val splashRotation = remember { Animatable(0f) }
         val splashAlpha = remember { Animatable(1f) }
 
         LaunchedEffect(Unit) {
             launch {
-                splashScale.animateTo(
-                    0.62f,
-                    animationSpec = tween(1250, easing = FastOutSlowInEasing)
-                )
+                splashScale.animateTo(0.62f, tween(1250, easing = FastOutSlowInEasing))
             }
             launch {
-                splashRotation.animateTo(
-                    540f,
-                    animationSpec = tween(1250, easing = FastOutSlowInEasing)
-                )
+                splashRotation.animateTo(540f, tween(1250, easing = FastOutSlowInEasing))
             }
             launch {
                 delay(850)
@@ -85,15 +79,12 @@ class MainActivity : ComponentActivity() {
         }
 
         if (showSplash) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color(0xFF5B3FD3)
-            ) {
+            Surface(Modifier.fillMaxSize(), color = Color(0xFF5B3FD3)) {
                 Box(contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Miracle Shop",
+                            Icons.Default.PlayArrow,
+                            "Miracle Shop",
                             tint = Color.White,
                             modifier = Modifier
                                 .size(116.dp)
@@ -118,7 +109,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        var query by remember { mutableStateOf(TextFieldValue("")) }
+        var query by remember { mutableStateOf(TextFieldValue("android")) }
         var selectedTab by remember { mutableIntStateOf(0) }
         var selectedCategory by remember { mutableIntStateOf(0) }
         var dark by remember { mutableStateOf(false) }
@@ -127,16 +118,19 @@ class MainActivity : ComponentActivity() {
         var error by remember { mutableStateOf<String?>(null) }
         var reloadKey by remember { mutableIntStateOf(0) }
 
-        LaunchedEffect(reloadKey) {
+        LaunchedEffect(reloadKey, query.text) {
+            val search = query.text.trim()
+            if (search.length < 2) return@LaunchedEffect
+
             loading = true
             error = null
             Thread {
                 try {
-                    val loaded = loadAppsFromGithub()
+                    val loaded = loadAppsFromFDroid(search)
                     runOnUiThread {
                         apps = loaded
                         loading = false
-                        error = if (loaded.isEmpty()) "לא נמצאו קבצי APK ב-Releases של ari900630-tech." else null
+                        error = if (loaded.isEmpty()) "לא נמצאו אפליקציות עבור החיפוש." else null
                     }
                 } catch (_: Exception) {
                     runOnUiThread {
@@ -147,9 +141,9 @@ class MainActivity : ComponentActivity() {
             }.start()
         }
 
+        val categories = listOf("הכול", "כללי", "כלים")
         val filtered = apps.filter {
-            (it.name.contains(query.text, true) || it.description.contains(query.text, true)) &&
-                (selectedCategory == 0 || it.category == listOf("הכול", "כללי", "כלים")[selectedCategory])
+            selectedCategory == 0 || it.category == categories[selectedCategory]
         }
 
         val background by animateColorAsState(
@@ -178,6 +172,7 @@ class MainActivity : ComponentActivity() {
                                 tint = foreground
                             )
                         }
+
                         OutlinedTextField(
                             value = query,
                             onValueChange = { query = it },
@@ -187,28 +182,28 @@ class MainActivity : ComponentActivity() {
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp)
                         )
+
                         IconButton(
                             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
                                 .background(MaterialTheme.colorScheme.primaryContainer),
-                            onClick = { }
+                            onClick = { reloadKey++ }
                         ) {
-                            Icon(Icons.Default.PlayArrow, "Miracle Shop", Modifier.size(30.dp))
+                            Icon(Icons.Default.Refresh, "רענון", Modifier.size(28.dp))
                         }
                     }
 
                     Spacer(Modifier.height(12.dp))
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
-                        ) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("הכול", "כללי", "כלים").forEachIndexed { index, label ->
+                                categories.forEachIndexed { index, label ->
                                     FilterChip(
                                         selected = selectedCategory == index,
                                         onClick = { selectedCategory = index },
                                         label = {
-                                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                            CompositionLocalProvider(
+                                                LocalLayoutDirection provides LayoutDirection.Rtl
+                                            ) {
                                                 Text(label)
                                             }
                                         }
@@ -217,13 +212,28 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                    Spacer(Modifier.height(12.dp))
+
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "קטלוג APK ציבורי • F-Droid",
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
 
                     when {
-                        loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        loading -> Box(
+                            Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator()
                         }
-                        error != null -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+
+                        error != null -> Box(
+                            Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.CloudOff, null, Modifier.size(48.dp))
                                 Spacer(Modifier.height(10.dp))
@@ -232,6 +242,7 @@ class MainActivity : ComponentActivity() {
                                 Button(onClick = { reloadKey++ }) { Text("רענון") }
                             }
                         }
+
                         else -> LazyColumn(
                             Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -244,9 +255,24 @@ class MainActivity : ComponentActivity() {
                     }
 
                     NavigationBar(containerColor = card) {
-                        NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("בית") })
-                        NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, icon = { Icon(Icons.Default.Apps, null) }, label = { Text("אפליקציות") })
-                        NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, icon = { Icon(Icons.Default.Download, null) }, label = { Text("הורדות") })
+                        NavigationBarItem(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            icon = { Icon(Icons.Default.Home, null) },
+                            label = { Text("בית") }
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            icon = { Icon(Icons.Default.Apps, null) },
+                            label = { Text("אפליקציות") }
+                        )
+                        NavigationBarItem(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            icon = { Icon(Icons.Default.Download, null) },
+                            label = { Text("הורדות") }
+                        )
                     }
                 }
             }
@@ -257,54 +283,61 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
-    private fun loadAppsFromGithub(): List<StoreApp> {
-        val reposJson = java.net.URL(GITHUB_API).openConnection().apply {
-            setRequestProperty("Accept", "application/vnd.github+json")
+    private fun loadAppsFromFDroid(searchText: String): List<StoreApp> {
+        val encoded = URLEncoder.encode(searchText, "UTF-8")
+        val searchJson = java.net.URL(FDROID_SEARCH_API + encoded).openConnection().apply {
+            setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "Miracle-Shop")
         }.getInputStream().bufferedReader().use { it.readText() }
 
-        val repos = org.json.JSONArray(reposJson)
+        val apps = org.json.JSONArray(org.json.JSONObject(searchJson).optString("apps", "[]"))
         val result = mutableListOf<StoreApp>()
 
-        for (i in 0 until repos.length()) {
-            val repo = repos.getJSONObject(i)
-            val repoName = repo.getString("name")
-            val releasesUrl = "https://api.github.com/repos/ari900630-tech/" + repoName + "/releases?per_page=10"
+        for (i in 0 until apps.length()) {
+            val item = apps.getJSONObject(i)
+            val name = item.optString("name", "אפליקציה")
+            val summary = item.optString("summary", "")
+            val icon = item.optString("icon", "")
+            val pageUrl = item.optString("url", "")
+            val packageName = pageUrl.substringAfterLast("/").takeIf { it.isNotBlank() } ?: continue
 
             try {
-                val releasesJson = java.net.URL(releasesUrl).openConnection().apply {
-                    setRequestProperty("Accept", "application/vnd.github+json")
+                val packageJson = java.net.URL(FDROID_PACKAGE_API + packageName).openConnection().apply {
+                    setRequestProperty("Accept", "application/json")
                     setRequestProperty("User-Agent", "Miracle-Shop")
                 }.getInputStream().bufferedReader().use { it.readText() }
 
-                val releases = org.json.JSONArray(releasesJson)
-                for (j in 0 until releases.length()) {
-                    val release = releases.getJSONObject(j)
-                    val tag = release.optString("tag_name", "latest")
-                    val assets = release.optJSONArray("assets") ?: continue
+                val packageObj = org.json.JSONObject(packageJson)
+                val packages = packageObj.optJSONArray("packages") ?: continue
+                if (packages.length() == 0) continue
 
-                    for (k in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(k)
-                        val name = asset.optString("name")
-                        val url = asset.optString("browser_download_url")
+                val latest = packages.getJSONObject(0)
+                val versionName = latest.optString("versionName", "latest")
+                val versionCode = latest.optLong("versionCode", 0L)
+                if (versionCode <= 0L) continue
 
-                        if (name.lowercase().endsWith(".apk") && url.isNotBlank()) {
-                            val imageUrl = "https://opengraph.githubassets.com/1/ari900630-tech/" + repoName
-                            result.add(
-                                StoreApp(
-                                    name = repoName,
-                                    description = release.optString("name", "אפליקציה מ-" + repoName),
-                                    version = tag,
-                                    downloadUrl = url,
-                                    category = if (repoName.contains("tool", true)) "כלים" else "כללי",
-                                    imageUrl = imageUrl
-                                )
-                            )
-                        }
-                    }
-                }
-            } catch (_: Exception) { }
+                val apkUrl = FDROID_APK_BASE + packageName + "_" + versionCode + ".apk"
+                val category = if (
+                    name.contains("tool", true) ||
+                    summary.contains("utility", true) ||
+                    summary.contains("tool", true)
+                ) "כלים" else "כללי"
+
+                result.add(
+                    StoreApp(
+                        name = name,
+                        description = summary,
+                        version = versionName,
+                        downloadUrl = apkUrl,
+                        category = category,
+                        imageUrl = icon
+                    )
+                )
+            } catch (_: Exception) {
+                // Skip an app whose metadata is temporarily unavailable.
+            }
         }
+
         return result.distinctBy { it.downloadUrl }
     }
 
@@ -326,10 +359,20 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(app.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(app.description, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-                    Text("גרסה " + app.version, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        app.description,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2
+                    )
+                    Text(
+                        "גרסה " + app.version,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                FilledTonalButton(onClick = onDownload) { Text("הורדת APK") }
+                FilledTonalButton(onClick = onDownload) {
+                    Text("הורדת APK")
+                }
             }
         }
     }
