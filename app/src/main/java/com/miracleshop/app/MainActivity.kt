@@ -115,7 +115,8 @@ class MainActivity : ComponentActivity() {
         var apps by remember { mutableStateOf<List<StoreApp>>(emptyList()) }
         var loading by remember { mutableStateOf(true) }
         var error by remember { mutableStateOf<String?>(null) }
-        var reloadKey by remember { mutableIntStateOf(0) }\n        var loadedAll by remember { mutableStateOf(false) }
+        var reloadKey by remember { mutableIntStateOf(0) }
+        var loadedAll by remember { mutableStateOf(false) }
 
         LaunchedEffect(reloadKey, query.text) {
             val search = query.text.trim()
@@ -366,7 +367,7 @@ class MainActivity : ComponentActivity() {
             val apkName = fileObj?.optString("name", "")
                 .orEmpty()
                 .ifBlank { version.optString("name", "") }
-                .ifBlank { "$packageName_$versionCode.apk" }
+                .ifBlank { "${packageName}_${versionCode}.apk" }
             val apkUrl = FDROID_APK_BASE + apkName
             val iconValue = metadata.opt("icon")
             val iconPath = if (iconValue is org.json.JSONObject) {
