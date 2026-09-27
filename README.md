@@ -10,3 +10,4 @@
 - הורדות מקישורי Releases של המאגר
 
 אין לשמור Service Account private key בתוך הקוד או המאגר. סודות צריכים להיות ב-GitHub Actions Secrets או Secret Manager.
+
