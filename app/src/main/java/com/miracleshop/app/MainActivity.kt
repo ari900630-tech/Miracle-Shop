@@ -196,7 +196,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start
@@ -205,7 +205,7 @@ class MainActivity : ComponentActivity() {
                                 FilterChip(
                                     selected = selectedCategory == index,
                                     onClick = { selectedCategory = index },
-                                    modifier = Modifier.padding(end = 8.dp),
+                                    modifier = Modifier.padding(start = 8.dp),
                                     label = {
                                         CompositionLocalProvider(
                                             LocalLayoutDirection provides LayoutDirection.Rtl
