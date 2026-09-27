@@ -330,8 +330,20 @@ class MainActivity : ComponentActivity() {
             val packageName = keys.next()
             val item = packages.optJSONObject(packageName) ?: continue
             val metadata = item.optJSONObject("metadata") ?: item
-            val name = metadata.optString("name", packageName)
-            val summary = metadata.optString("summary", metadata.optString("description", ""))
+            fun localizedText(key: String): String {
+                val value = metadata.opt(key)
+                if (value is org.json.JSONObject) {
+                    return value.optString("en-US")
+                        .ifBlank { value.optString("en-GB") }
+                        .ifBlank {
+                            val it = value.keys()
+                            if (it.hasNext()) value.optString(it.next()) else ""
+                        }
+                }
+                return value?.toString() ?: ""
+            }
+            val name = localizedText("name").ifBlank { packageName }
+            val summary = localizedText("summary").ifBlank { localizedText("description") }
             val categories = metadata.optJSONArray("categories")
             val categoryText = buildString {
                 if (categories != null) for (i in 0 until categories.length()) append(categories.optString(i)).append(' ')
@@ -350,11 +362,21 @@ class MainActivity : ComponentActivity() {
             val versionCode = version.optLong("versionCode", 0)
             if (versionCode <= 0) continue
 
-            val apkName = version.optString("file", "")
+            val fileObj = version.optJSONObject("file")
+            val apkName = fileObj?.optString("name", "")
+                .orEmpty()
                 .ifBlank { version.optString("name", "") }
                 .ifBlank { "$packageName_$versionCode.apk" }
             val apkUrl = FDROID_APK_BASE + apkName
-            val iconPath = metadata.optString("icon", "")
+            val iconValue = metadata.opt("icon")
+            val iconPath = if (iconValue is org.json.JSONObject) {
+                iconValue.optString("en-US")
+                    .ifBlank { iconValue.optString("en-GB") }
+                    .ifBlank {
+                        val it = iconValue.keys()
+                        if (it.hasNext()) iconValue.optString(it.next()) else ""
+                    }
+            } else iconValue?.toString().orEmpty()
             val iconUrl = if (iconPath.startsWith("http")) iconPath else "https://f-droid.org/repo/$iconPath"
             val text = haystack
             val category = when {
