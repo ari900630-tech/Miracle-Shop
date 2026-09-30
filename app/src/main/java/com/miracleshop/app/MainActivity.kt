@@ -48,7 +48,8 @@ data class StoreApp(
     val version: String,
     val downloadUrl: String,
     val category: String,
-    val imageUrl: String
+    val imageUrl: String,
+    val packageName: String
 )
 
 private const val FDROID_SEARCH_API = "https://search.f-droid.org/api/search_apps?q="
@@ -236,7 +237,7 @@ class MainActivity : ComponentActivity() {
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
                             items(filtered) { app ->
-                                AppCard(app, card) { openDownload(app.downloadUrl) }
+                                AppCard(app, card) { openPlayStore(app.packageName) }
                             }
                         }
                     }
@@ -288,6 +289,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun openPlayStore(packageName: String) {
+        val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + Uri.encode(packageName))).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        try { startActivity(marketIntent) } catch (_: Exception) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + Uri.encode(packageName))))
         }
     }
 
@@ -393,7 +401,7 @@ class MainActivity : ComponentActivity() {
                 text.contains("tools") || text.contains("utility") -> "כלים"
                 else -> "כללי"
             }
-            result.add(StoreApp(name, summary, version.optString("versionName", "latest"), apkUrl, category, iconUrl))
+            result.add(StoreApp(name, summary, version.optString("versionName", "latest"), apkUrl, category, iconUrl, packageName))
         }
         return result.distinctBy { it.downloadUrl }.sortedBy { it.name.lowercase() }
     }
@@ -442,7 +450,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     FilledTonalButton(onClick = onDownload) {
-                        Text("הורדת APK")
+                        Text("פתח ב-Google Play")
                     }
                 }
             }
